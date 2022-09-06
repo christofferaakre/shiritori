@@ -9,7 +9,6 @@ use serenity::prelude::*;
 pub struct Shiritori {
     words: Mutex<Vec<Word>>,
     pub intents: GatewayIntents,
-    guild_id: Option<GuildId>,
 }
 
 use indoc::{formatdoc, indoc};
@@ -38,7 +37,6 @@ impl Shiritori {
     pub fn new() -> Self {
         Self {
             words: Mutex::new(vec![]),
-            guild_id: None,
             intents: GatewayIntents::GUILD_MESSAGES
                 | GatewayIntents::DIRECT_MESSAGES
                 | GatewayIntents::MESSAGE_CONTENT
@@ -124,6 +122,15 @@ impl Shiritori {
             .push(Word::new(message.author, word.to_string()));
     }
 
+    async fn get_display_name(&self, ctx: &Context, message: &Message) -> String {
+        message
+            .member(&ctx.http)
+            .await
+            .expect("Could not find member")
+            .display_name()
+            .to_string()
+    }
+
     async fn log_messages(&self) {
         println!("Logging played words:");
         for word in self.words.lock().await.iter() {
@@ -150,7 +157,8 @@ impl Shiritori {
             Some(previous_word) => {
                 format!(
                     "The last word was {} by {}",
-                    previous_word.word, previous_word.author.name
+                    previous_word.word,
+                    self.get_display_name(&ctx, &message).await,
                 )
             }
         };
