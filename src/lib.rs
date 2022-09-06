@@ -25,6 +25,7 @@ const HELP_STRING: &str = indoc! {r#"
 struct Word {
     pub author: User,
     pub word: String,
+    pub display_name: String,
 }
 
 impl std::fmt::Display for Word {
@@ -116,10 +117,11 @@ impl Shiritori {
 
         let played_message = format!("{} Played word: {}", message.author.mention(), word);
         channel.say(&ctx.http, played_message).await.unwrap();
-        self.words
-            .lock()
-            .await
-            .push(Word::new(message.author, word.to_string()));
+        self.words.lock().await.push(Word::new(
+            message.author.clone(),
+            word.to_string(),
+            self.get_display_name(&ctx, &message).await,
+        ));
     }
 
     async fn get_display_name(&self, ctx: &Context, message: &Message) -> String {
@@ -131,11 +133,17 @@ impl Shiritori {
             .to_string()
     }
 
-    async fn log_messages(&self) {
+    async fn history(&self, ctx: Context, message: Message) {
         println!("Logging played words:");
+        let mut log_message = String::from("Game history: \n");
         for word in self.words.lock().await.iter() {
-            println!("{}", word);
+            log_message.push_str(format!("{}: {}\n", word.display_name, word.word).as_str())
         }
+        message
+            .channel_id
+            .say(&ctx.http, log_message)
+            .await
+            .unwrap();
     }
 
     async fn get_previous_word(&self) -> Option<Word> {
@@ -190,7 +198,7 @@ impl EventHandler for Shiritori {
             1 => self.help(ctx, message).await,
             2 => match split[1] {
                 "help" => self.help(ctx, message).await,
-                "log_words" => self.log_messages().await,
+                "history" => self.history(ctx, message).await,
                 "word" => self.show_previous_word(ctx, message).await,
                 _ => self.play(ctx, message, split[1]).await,
             },
@@ -203,7 +211,11 @@ impl EventHandler for Shiritori {
     }
 }
 impl Word {
-    fn new(user: User, word: String) -> Word {
-        Word { author: user, word }
+    fn new(user: User, word: String, display_name: String) -> Word {
+        Word {
+            author: user,
+            word,
+            display_name,
+        }
     }
 }
