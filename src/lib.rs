@@ -40,6 +40,7 @@ impl Shiritori {
     }
 
     async fn play(ctx: Context, message: Message, word: &str) {
+        let channel = message.channel_id;
         let characters = word.chars().map(Character::new);
         // Kind of an ugly way to do this, but it works
         let all_hiragana = characters.clone().all(|c| {
@@ -54,16 +55,26 @@ impl Shiritori {
             return;
         }
 
+        let last_character = characters
+            .last()
+            .expect("Failed to get last character of word");
+
+        // #TODO: End game, update leaderbord, etc.
+        if last_character == Character::new('ん') {
+            let fail_string = format!(
+                "{} Your word {} ends in ん. Better luck next time!",
+                message.author.mention(),
+                word,
+            );
+            channel.say(&ctx.http, fail_string).await.unwrap();
+            return;
+        }
         // #TODO: Check that the word is playable
-        // #TODO: Check if the word ends in ん
+
         // If all the characters are hiragana, play the word.
 
         let played_message = format!("{} Played word: {}", message.author.mention(), word);
-        message
-            .channel_id
-            .say(&ctx.http, played_message)
-            .await
-            .unwrap();
+        channel.say(&ctx.http, played_message).await.unwrap();
     }
 }
 
