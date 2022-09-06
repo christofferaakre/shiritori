@@ -3,8 +3,9 @@ use shiritori::{Shiritori, DISCORD_BOT_TOKEN};
 
 #[tokio::main]
 async fn main() {
-    let mut client = Client::builder(&DISCORD_BOT_TOKEN, Shiritori::intents())
-        .event_handler(Shiritori)
+    let shiritori = Shiritori::new();
+    let mut client = Client::builder(&DISCORD_BOT_TOKEN, shiritori.intents)
+        .event_handler(shiritori)
         .await
         .expect("Error creating client");
 

@@ -5,7 +5,10 @@ use serenity::model::gateway::Ready;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
-pub struct Shiritori;
+pub struct Shiritori {
+    words: Vec<String>,
+    pub intents: GatewayIntents,
+}
 
 use indoc::indoc;
 
@@ -18,11 +21,14 @@ const HELP_STRING: &str = indoc! {r#"
 "#};
 
 impl Shiritori {
-    pub fn intents() -> GatewayIntents {
-        GatewayIntents::GUILD_MESSAGES
-            | GatewayIntents::DIRECT_MESSAGES
-            | GatewayIntents::MESSAGE_CONTENT
-            | GatewayIntents::GUILD_PRESENCES
+    pub fn new() -> Self {
+        Self {
+            words: vec![],
+            intents: GatewayIntents::GUILD_MESSAGES
+                | GatewayIntents::DIRECT_MESSAGES
+                | GatewayIntents::MESSAGE_CONTENT
+                | GatewayIntents::GUILD_PRESENCES,
+        }
     }
 
     async fn help(ctx: Context, message: Message) {
