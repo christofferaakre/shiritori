@@ -11,12 +11,12 @@ use crate::constants::{HELP_STRING, PREFIX};
 use crate::word::Word;
 
 type Words = Mutex<Vec<Word>>;
-pub struct Bot {
+pub struct Shiritori {
     words: Words,
     pub intents: GatewayIntents,
 }
 
-impl Bot {
+impl Shiritori {
     pub fn new() -> Self {
         Self {
             words: Mutex::new(vec![]),
@@ -27,7 +27,7 @@ impl Bot {
         }
     }
 
-    pub async fn help(&self, ctx: Context, message: Message) {
+    async fn help(&self, ctx: Context, message: Message) {
         if let Err(why) = message.channel_id.say(&ctx.http, HELP_STRING).await {
             println!("Error sending message: {:?}", why);
         }
@@ -41,7 +41,7 @@ impl Bot {
         }
     }
 
-    pub async fn play(&self, ctx: Context, message: Message, word: &str) {
+    async fn play(&self, ctx: Context, message: Message, word: &str) {
         let channel = message.channel_id;
         let characters = word.chars().map(Character::new);
         // Kind of an ugly way to do this, but it works
@@ -106,7 +106,7 @@ impl Bot {
         ));
     }
 
-    pub async fn get_display_name(&self, ctx: &Context, message: &Message) -> String {
+    async fn get_display_name(&self, ctx: &Context, message: &Message) -> String {
         message
             .member(&ctx.http)
             .await
@@ -115,7 +115,7 @@ impl Bot {
             .to_string()
     }
 
-    pub async fn history(&self, ctx: Context, message: Message) {
+    async fn history(&self, ctx: Context, message: Message) {
         println!("Logging played words:");
         let mut log_message = String::from("Game history: \n");
         for word in self.words.lock().await.iter() {
@@ -128,18 +128,18 @@ impl Bot {
             .unwrap();
     }
 
-    pub async fn get_previous_word(&self) -> Option<Word> {
+    async fn get_previous_word(&self) -> Option<Word> {
         self.words.lock().await.last().cloned()
     }
 
-    pub async fn get_current_character(&self) -> Option<Hiragana> {
+    async fn get_current_character(&self) -> Option<Hiragana> {
         match self.get_previous_word().await {
             None => None,
             Some(word) => Some(Hiragana::new(word.word.chars().last().unwrap()).unwrap()),
         }
     }
 
-    pub async fn show_previous_word(&self, ctx: Context, message: Message) {
+    async fn show_previous_word(&self, ctx: Context, message: Message) {
         let previous_word = self.get_previous_word().await;
         let mut _word_string: &str;
         let word_string = match previous_word {
@@ -158,5 +158,35 @@ impl Bot {
             .say(&ctx.http, word_string)
             .await
             .unwrap();
+    }
+}
+
+#[async_trait]
+impl EventHandler for Shiritori {
+    async fn message(&self, ctx: Context, message: Message) {
+        let msg = message.content.clone();
+        let split: Vec<&str> = msg.split_whitespace().collect();
+        // split[0] should always exist because the only way to get an empty split
+        // is splitting on an empty string, and you can't send empty strings on Discord.
+        assert!(split.len() > 0, "Somehow the length of the split was 0??");
+        if split[0] != PREFIX {
+            println!("Message {} did not start with prefix {}.", msg, PREFIX);
+            return;
+        }
+
+        match split.len() {
+            1 => self.help(ctx, message).await,
+            2 => match split[1] {
+                "help" => self.help(ctx, message).await,
+                "history" => self.history(ctx, message).await,
+                "word" => self.show_previous_word(ctx, message).await,
+                _ => self.play(ctx, message, split[1]).await,
+            },
+            _ => self.not_recognised(ctx, message).await,
+        }
+    }
+
+    async fn ready(&self, _: Context, ready: Ready) {
+        println!("{} is connected!", ready.user.name);
     }
 }
