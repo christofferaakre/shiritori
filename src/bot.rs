@@ -13,7 +13,7 @@ pub struct Shiritori {
     pub intents: GatewayIntents,
 }
 
-use indoc::{formatdoc, indoc};
+use indoc::{formatdoc};
 
 use crate::constants::{HELP_STRING, PREFIX};
 
@@ -142,7 +142,7 @@ impl Shiritori {
 
     async fn show_previous_word(&self, ctx: Context, message: Message) {
         let previous_word = self.get_previous_word().await;
-        let mut word_string: &str;
+        let mut _word_string: &str;
         let word_string = match previous_word {
             None => format!("No word has been played yet."),
             Some(previous_word) => {
