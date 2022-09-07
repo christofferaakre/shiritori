@@ -1,4 +1,4 @@
-use crate::word::Word;
+use indoc::formatdoc;
 use kanji::Character;
 use kanji::Hiragana;
 use serenity::async_trait;
@@ -7,15 +7,14 @@ use serenity::model::gateway::Ready;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
+use crate::constants::{HELP_STRING, PREFIX};
+use crate::word::Word;
+
 type Words = Mutex<Vec<Word>>;
 pub struct Shiritori {
     words: Words,
     pub intents: GatewayIntents,
 }
-
-use indoc::{formatdoc};
-
-use crate::constants::{HELP_STRING, PREFIX};
 
 impl Shiritori {
     pub fn new() -> Self {
