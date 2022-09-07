@@ -1,5 +1,6 @@
 use serenity::Client;
-use shiritori::{Shiritori, DISCORD_BOT_TOKEN};
+use shiritori::bot::Shiritori;
+use shiritori::constants::DISCORD_BOT_TOKEN;
 
 #[tokio::main]
 async fn main() {
