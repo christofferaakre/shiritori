@@ -11,19 +11,16 @@ use crate::constants::{HELP_STRING, PREFIX};
 use crate::word::Word;
 
 type Words = Mutex<Vec<Word>>;
+
+#[derive(Debug)]
 pub struct Bot {
     words: Words,
-    pub intents: GatewayIntents,
 }
 
 impl Bot {
     pub fn new() -> Self {
         Self {
             words: Mutex::new(vec![]),
-            intents: GatewayIntents::GUILD_MESSAGES
-                | GatewayIntents::DIRECT_MESSAGES
-                | GatewayIntents::MESSAGE_CONTENT
-                | GatewayIntents::GUILD_PRESENCES,
         }
     }
 
