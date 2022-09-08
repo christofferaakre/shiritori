@@ -40,71 +40,91 @@ impl Bot {
         self.say(&ctx, &message.channel_id, &error_message).await
     }
 
-    pub async fn play(&self, ctx: Context, message: Message, word: &str) {
-        let channel = message.channel_id;
-        let characters = word.chars().map(Character::new);
-        // Kind of an ugly way to do this, but it works
-        let all_hiragana = characters.clone().all(|c| {
-            if let Character::Hiragana(_) = c {
-                return true;
-            }
-            false
-        });
-
-        if !all_hiragana {
-            println!("Word {} contained non-hiragana characters", word);
-            self.not_recognised(ctx, message).await;
-            return;
-        }
-
-        let characters: Vec<Hiragana> = characters
-            .map(|c| Hiragana::new(c.get()).unwrap())
-            .collect();
-
+    async fn check_loss(&self, characters: &Vec<Hiragana>) -> bool {
         let last_character = characters
             .last()
             .expect("Failed to get last character of word");
 
         // #TODO: End game, update leaderbord, etc.
         if last_character == &Hiragana::new('ん').unwrap() {
-            let fail_string = format!(
-                "{} Your word {} ends in ん. Better luck next time!",
-                message.author.mention(),
-                word,
-            );
-            self.say(&ctx, &channel, &fail_string).await;
-            return;
+            return true;
         }
 
+        return false;
+    }
+
+    async fn is_word_playable(&self, characters: &Vec<Hiragana>) -> bool {
         let first_character = characters
             .first()
             .expect("Failed to get first character of word");
 
-        // #TODO: Check that the word is playable
+        // If there is a current char, the first char must be equal to that
         if let Some(current_char) = self.get_current_character().await {
             let previous_word = self
                 .get_previous_word()
                 .await
                 .expect("Couldn't get previous word");
-            if &current_char != first_character {
-                let bad_word_string = formatdoc! {r#"
-                        {} Your word {} starts with {}. The previous word was {}, which ends in {}, so your word must start with {}
-                "#, message.author.mention(), word, first_character, previous_word.word, current_char, current_char};
 
-                self.say(&ctx, &channel, &bad_word_string).await;
-                return;
-            }
+            return first_character.get() == current_char.get();
         }
-        // If all the characters are hiragana, play the word.
+        // Otherwise, any first character is fine
+        else {
+            true
+        }
+    }
 
+    async fn play_word(&self, ctx: &Context, message: &Message, word: Word) {
         let played_message = format!("{} Played word: {}", message.author.mention(), word);
-        self.say(&ctx, &channel, &played_message).await;
+        self.say(&ctx, &message.channel_id, &played_message).await;
 
-        self.words.lock().await.push(Word::new(
+        self.words.lock().await.push(word);
+    }
+
+    pub async fn try_play_word(&self, ctx: Context, message: Message, word: &str) {
+        let channel = message.channel_id;
+        let characters = word.chars().map(Character::new);
+        // Kind of an ugly way to do this, but it works
+        let all_hiragana = characters.clone().all(|c| kanji::is_hiragana(c.get()));
+
+        // check if message contains non-hiragana characters
+        if !all_hiragana {
+            println!("Word {} contained non-hiragana characters", word);
+            self.not_recognised(ctx, message).await;
+            return;
+        }
+
+        // convert Character structs to Hiragana structs
+        let characters: Vec<Hiragana> = characters
+            .map(|c| Hiragana::new(c.get()).unwrap())
+            .collect();
+
+        let word = Word::new(
             message.author.clone(),
             word.to_string(),
             self.get_display_name(&ctx, &message).await,
-        ));
+        );
+
+        if self.check_loss(&characters).await {
+            let fail_string = format!(
+                "{} Your word {} ends in ん. Better luck next time!",
+                message.author.mention(),
+                word.word,
+            );
+            self.say(&ctx, &message.channel_id, &fail_string).await;
+            return;
+        }
+
+        if !self.is_word_playable(&characters).await {
+            let first_character = characters.first().unwrap();
+            let current_char = message.content.chars().last().unwrap();
+            let bad_word_string = formatdoc! {r#"{} Your word {} starts with {}. The previous word was {}, which ends in {}, so your word must start with {}"#, message.author.mention(), word, first_character, self.words.lock().await.last().unwrap().word, current_char, current_char};
+
+            self.say(&ctx, &channel, &bad_word_string).await;
+            return;
+        }
+
+        // If the word is playable, play it.
+        self.play_word(&ctx, &message, word).await;
     }
 
     pub async fn get_display_name(&self, ctx: &Context, message: &Message) -> String {

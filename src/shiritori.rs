@@ -62,7 +62,7 @@ impl EventHandler for Shiritori {
                 "help" => bot.help(ctx, message).await,
                 "history" => bot.history(ctx, message).await,
                 "word" => bot.show_previous_word(ctx, message).await,
-                _ => bot.play(ctx, message, split[1]).await,
+                _ => bot.try_play_word(ctx, message, split[1]).await,
             },
             _ => bot.not_recognised(ctx, message).await,
         }
