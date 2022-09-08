@@ -14,8 +14,6 @@ use crate::word::Word;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
-type ShardID = u64;
-
 pub struct Shiritori {
     bots: Mutex<HashMap<GuildId, Bot>>,
     pub intents: GatewayIntents,
