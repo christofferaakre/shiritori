@@ -36,14 +36,12 @@ impl Shiritori {
 #[async_trait]
 impl EventHandler for Shiritori {
     async fn message(&self, ctx: Context, message: Message) {
+        // Check that message was not sent by the bot
+        if ctx.cache.current_user().tag() == message.author.tag() {
+            return;
+        }
+
         let id = message.guild_id.expect("Failed to get guild id of message");
-
-        // If no bot exists for this guild yet, create one
-
-        let bot = match self.bots.lock().await.entry(id) {
-            Entry::Occupied(entry) => entry.into_mut(),
-            Entry::Vacant(entry) => entry.insert(Bot::new()),
-        };
 
         let msg = message.content.clone();
 
@@ -56,63 +54,23 @@ impl EventHandler for Shiritori {
             return;
         }
 
+        // If no bot exists for this guild yet, create one.
+        // Else, retrieve the correct bot from the hashmap
+        let mut bots = self.bots.lock().await;
+        let bot = match bots.entry(id) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => entry.insert(Bot::new()),
+        };
+
         match split.len() {
-            1 => {
-                self.bots
-                    .lock()
-                    .await
-                    .get(&id)
-                    .unwrap()
-                    .help(ctx, message)
-                    .await
-            }
+            1 => bot.help(ctx, message).await,
             2 => match split[1] {
-                "help" => {
-                    self.bots
-                        .lock()
-                        .await
-                        .get(&id)
-                        .unwrap()
-                        .help(ctx, message)
-                        .await
-                }
-                "history" => {
-                    self.bots
-                        .lock()
-                        .await
-                        .get(&id)
-                        .unwrap()
-                        .history(ctx, message)
-                        .await
-                }
-                "word" => {
-                    self.bots
-                        .lock()
-                        .await
-                        .get(&id)
-                        .unwrap()
-                        .show_previous_word(ctx, message)
-                        .await
-                }
-                _ => {
-                    self.bots
-                        .lock()
-                        .await
-                        .get(&id)
-                        .unwrap()
-                        .play(ctx, message, split[1])
-                        .await
-                }
+                "help" => bot.help(ctx, message).await,
+                "history" => bot.history(ctx, message).await,
+                "word" => bot.show_previous_word(ctx, message).await,
+                _ => bot.play(ctx, message, split[1]).await,
             },
-            _ => {
-                self.bots
-                    .lock()
-                    .await
-                    .get(&id)
-                    .unwrap()
-                    .not_recognised(ctx, message)
-                    .await
-            }
+            _ => bot.not_recognised(ctx, message).await,
         }
     }
 

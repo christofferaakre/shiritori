@@ -51,6 +51,7 @@ impl Bot {
 
         if !all_hiragana {
             println!("Word {} contained non-hiragana characters", word);
+            self.not_recognised(ctx, message).await;
             return;
         }
 
@@ -113,7 +114,6 @@ impl Bot {
     }
 
     pub async fn history(&self, ctx: Context, message: Message) {
-        println!("Logging played words:");
         let mut log_message = String::from("Game history: \n");
         for word in self.words.lock().await.iter() {
             log_message.push_str(format!("{}: {}\n", word.display_name, word.word).as_str())
