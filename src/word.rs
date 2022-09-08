@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
 use serenity::model::user::User;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Word {
     pub author: User,
     pub word: String,

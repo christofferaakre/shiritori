@@ -10,3 +10,5 @@ serenity = { version = "*", default-features = false, features = ["client", "gat
 tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 kanji = "*"
 indoc = "*"
+serde = "*"
+serde_json = "*"
