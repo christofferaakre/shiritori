@@ -1,6 +1,3 @@
-use indoc::formatdoc;
-use kanji::Character;
-use kanji::Hiragana;
 use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
@@ -8,8 +5,7 @@ use serenity::model::prelude::*;
 use serenity::prelude::*;
 
 use crate::bot::Bot;
-use crate::constants::{HELP_STRING, PREFIX};
-use crate::word::Word;
+use crate::constants::PREFIX;
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -72,7 +68,7 @@ impl EventHandler for Shiritori {
         }
     }
 
-    async fn ready(&self, ctx: Context, ready: Ready) {
+    async fn ready(&self, _ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
     }
 }

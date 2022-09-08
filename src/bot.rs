@@ -1,13 +1,13 @@
 use indoc::formatdoc;
 use kanji::Character;
 use kanji::Hiragana;
-use serenity::async_trait;
+
 use serenity::model::channel::Message;
-use serenity::model::gateway::Ready;
+
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
-use crate::constants::{HELP_STRING, PREFIX};
+use crate::constants::HELP_STRING;
 use crate::word::Word;
 
 type Words = Mutex<Vec<Word>>;
@@ -24,18 +24,20 @@ impl Bot {
         }
     }
 
-    pub async fn help(&self, ctx: Context, message: Message) {
-        if let Err(why) = message.channel_id.say(&ctx.http, HELP_STRING).await {
-            println!("Error sending message: {:?}", why);
+    async fn say(&self, ctx: &Context, channel: &ChannelId, message: &impl std::fmt::Display) {
+        if let Err(why) = channel.say(&ctx.http, message).await {
+            eprintln!("Error sending message: {:?}", why);
         }
+    }
+
+    pub async fn help(&self, ctx: Context, message: Message) {
+        self.say(&ctx, &message.channel_id, &HELP_STRING).await;
     }
 
     pub async fn not_recognised(&self, ctx: Context, message: Message) {
         let error_message = format!("{} is not a recognised command", message.content.clone());
         println!("{}", error_message);
-        if let Err(why) = message.channel_id.say(&ctx.http, error_message).await {
-            println!("Error sending message: {:?}", why);
-        }
+        self.say(&ctx, &message.channel_id, &error_message).await
     }
 
     pub async fn play(&self, ctx: Context, message: Message, word: &str) {
@@ -70,7 +72,7 @@ impl Bot {
                 message.author.mention(),
                 word,
             );
-            channel.say(&ctx.http, fail_string).await.unwrap();
+            self.say(&ctx, &channel, &fail_string).await;
             return;
         }
 
@@ -89,14 +91,15 @@ impl Bot {
                         {} Your word {} starts with {}. The previous word was {}, which ends in {}, so your word must start with {}
                 "#, message.author.mention(), word, first_character, previous_word.word, current_char, current_char};
 
-                channel.say(&ctx.http, bad_word_string).await.unwrap();
+                self.say(&ctx, &channel, &bad_word_string).await;
                 return;
             }
         }
         // If all the characters are hiragana, play the word.
 
         let played_message = format!("{} Played word: {}", message.author.mention(), word);
-        channel.say(&ctx.http, played_message).await.unwrap();
+        self.say(&ctx, &channel, &played_message).await;
+
         self.words.lock().await.push(Word::new(
             message.author.clone(),
             word.to_string(),
@@ -118,11 +121,7 @@ impl Bot {
         for word in self.words.lock().await.iter() {
             log_message.push_str(format!("{}: {}\n", word.display_name, word.word).as_str())
         }
-        message
-            .channel_id
-            .say(&ctx.http, log_message)
-            .await
-            .unwrap();
+        self.say(&ctx, &message.channel_id, &log_message).await;
     }
 
     pub async fn get_previous_word(&self) -> Option<Word> {
@@ -149,11 +148,6 @@ impl Bot {
                 )
             }
         };
-
-        message
-            .channel_id
-            .say(&ctx.http, word_string)
-            .await
-            .unwrap();
+        self.say(&ctx, &message.channel_id, &word_string).await;
     }
 }
